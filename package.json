@@ -1,0 +1,82 @@
+{
+  "name": "google-java-format-plugin",
+  "displayName": "Google Java Format Plugin",
+  "description": "简洁的Google Java Format格式化工具，支持Google Style和AOSP格式切换",
+  "version": "1.0.0",
+  "publisher": "google-java-format",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Formatters"
+  ],
+  "keywords": [
+    "java",
+    "format",
+    "google",
+    "aosp",
+    "formatter"
+  ],
+  "activationEvents": [
+    "onLanguage:java"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Google Java Format",
+      "properties": {
+        "google-java-format.executable-path": {
+          "type": "string",
+          "default": "google-java-format",
+          "description": "Google Java Format可执行文件路径。如果安装在PATH中，可以直接使用'google-java-format'",
+          "scope": "resource"
+        },
+        "google-java-format.style": {
+          "type": "string",
+          "enum": ["google", "aosp"],
+          "default": "google",
+          "description": "代码格式化风格：google（Google Style）或 aosp（AOSP Style）",
+          "scope": "resource"
+        },
+        "google-java-format.extra-args": {
+          "type": "string",
+          "default": "",
+          "description": "传递给Google Java Format的额外命令行参数",
+          "scope": "resource"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "googleJavaFormat.switchStyle",
+        "title": "切换格式化风格（Google/AOSP）",
+        "category": "Google Java Format"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId == java",
+          "command": "googleJavaFormat.switchStyle",
+          "group": "1_modification@2"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^4.9.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/google-format-plugin.git"
+  },
+  "license": "Apache-2.0"
+}

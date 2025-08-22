@@ -1,0 +1,19 @@
+# Source files
+src/**
+**/*.ts
+**/*.map
+
+# Build configuration
+tsconfig.json
+
+# Development dependencies
+node_modules/
+
+# Git files
+.gitignore
+
+# Documentation for development
+vsc-extension-quickstart.md
+
+# OS files
+.DS_Store
