@@ -32,71 +32,42 @@ fi
 
 echo "检测到操作系统: $OS"
 
-# 检查当前Java版本
+# 检查当前Java版本并确定安装策略
 check_java_version() {
     if command -v java &> /dev/null; then
-        JAVA_VERSION=$(java -version 2>&1 | head -n1 | cut -d'"' -f2 | cut -d'.' -f1-2)
+        JAVA_VERSION=$(java -version 2>&1 | head -n1 | cut -d'"' -f2)
         echo "当前Java版本: $JAVA_VERSION"
         
-        # 检查是否为Java 11+
-        MAJOR_VERSION=$(echo $JAVA_VERSION | cut -d'.' -f1)
-        if [ "$MAJOR_VERSION" -ge 11 ] 2>/dev/null; then
-            echo "✅ Java版本满足要求 (>= 11)"
+        # 解析主版本号
+        if [[ $JAVA_VERSION == 1.8* ]]; then
+            MAJOR_VERSION=8
+        else
+            MAJOR_VERSION=$(echo $JAVA_VERSION | cut -d'.' -f1)
+        fi
+        
+        # 根据Java版本确定安装策略
+        if [ "$MAJOR_VERSION" -eq 8 ]; then
+            echo "✅ 检测到Java 8，将安装兼容版本的Google Java Format 1.7"
+            INSTALL_STRATEGY="java8"
+            return 0
+        elif [ "$MAJOR_VERSION" -eq 24 ]; then
+            echo "✅ 检测到Java 24，将安装最新版本的Google Java Format"
+            INSTALL_STRATEGY="java24"
             return 0
         else
-            echo "⚠️  Java版本过低，需要Java 11或更高版本"
+            echo "⚠️  检测到Java $MAJOR_VERSION"
+            echo "⚠️  目前脚本仅支持Java 8和Java 24的自动安装"
+            echo "⚠️  请参考README.md中的手动安装指南"
+            INSTALL_STRATEGY="manual"
             return 1
         fi
     else
-        echo "❌ 未检测到Java"
+        echo "❌ 未检测到Java，请先安装Java"
         return 1
     fi
 }
 
-# 安装Java 11
-install_java11() {
-    echo ""
-    echo "正在安装Java 11..."
-    
-    if [ "$OS" = "macos" ]; then
-        if command -v brew &> /dev/null; then
-            echo "使用Homebrew安装OpenJDK 11..."
-            brew install openjdk@11
-            
-            # 设置环境变量
-            echo "配置环境变量..."
-            SHELL_RC=""
-            if [ -n "$ZSH_VERSION" ]; then
-                SHELL_RC="$HOME/.zshrc"
-            elif [ -n "$BASH_VERSION" ]; then
-                SHELL_RC="$HOME/.bash_profile"
-            else
-                SHELL_RC="$HOME/.profile"
-            fi
-            
-            echo 'export PATH="/usr/local/opt/openjdk@11/bin:$PATH"' >> "$SHELL_RC"
-            echo 'export JAVA_HOME=$(/usr/libexec/java_home -v 11)' >> "$SHELL_RC"
-            
-            echo "✅ Java 11安装完成，请运行以下命令重新加载配置："
-            echo "source $SHELL_RC"
-        else
-            echo "❌ 请先安装Homebrew: https://brew.sh"
-            exit 1
-        fi
-    elif [ "$OS" = "linux" ]; then
-        echo "安装OpenJDK 11..."
-        if command -v apt-get &> /dev/null; then
-            sudo apt update
-            sudo apt install -y openjdk-11-jdk
-        elif command -v yum &> /dev/null; then
-            sudo yum install -y java-11-openjdk-devel
-        else
-            echo "❌ 不支持的包管理器，请手动安装Java 11"
-            exit 1
-        fi
-        echo "✅ Java 11安装完成"
-    fi
-}
+# 已删除install_java11函数，现在使用版本特定的安装策略
 
 # 安装Google Java Format
 install_google_java_format() {
@@ -117,55 +88,83 @@ install_google_java_format() {
             echo "✅ Google Java Format安装完成"
         else
             # 手动安装
-            install_manual()
+            install_compatible_version
         fi
     fi
 }
 
-# 手动安装（下载jar文件）
-install_manual() {
-    echo "手动安装Google Java Format..."
+# 根据Java版本安装对应的Google Java Format版本
+install_compatible_version() {
+    echo ""
+    echo "根据Java版本安装兼容的Google Java Format..."
     
     # 创建安装目录
-    INSTALL_DIR="$HOME/tools/google-java-format"
+    INSTALL_DIR="$HOME/.local/tool/google-java-format"
+    BIN_DIR="$HOME/.local/bin"
     mkdir -p "$INSTALL_DIR"
+    mkdir -p "$BIN_DIR"
     
-    # 下载最新版本
-    echo "下载Google Java Format..."
-    LATEST_VERSION=$(curl -s https://api.github.com/repos/google/google-java-format/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
-    
-    if [ -z "$LATEST_VERSION" ]; then
-        echo "⚠️  无法获取最新版本，使用默认版本 1.19.2"
-        LATEST_VERSION="1.19.2"
+    # 根据Java版本选择对应的版本
+    if [ "$INSTALL_STRATEGY" = "java8" ]; then
+        # Java 8 使用 1.8 版本
+        echo "为Java 8安装Google Java Format 1.7..."
+        JAR_FILE="google-java-format-1.7-all-deps.jar"
+        DOWNLOAD_URL="https://github.com/google/google-java-format/releases/download/google-java-format-1.7/$JAR_FILE"
+    elif [ "$INSTALL_STRATEGY" = "java24" ]; then
+        # Java 24 使用最新版本
+        echo "为Java 24安装Google Java Format 1.28..."
+        JAR_FILE="google-java-format-1.28.0-all-deps.jar"
+        DOWNLOAD_URL="https://github.com/google/google-java-format/releases/download/v1.28.0/$JAR_FILE"
+    else
+        echo "❌ 不支持的安装策略: $INSTALL_STRATEGY"
+        return 1
     fi
+
+    echo "文件下载位置: $INSTALL_DIR/$JAR_FILE"
     
-    JAR_FILE="google-java-format-${LATEST_VERSION}-all-deps.jar"
-    DOWNLOAD_URL="https://github.com/google/google-java-format/releases/download/v${LATEST_VERSION}/${JAR_FILE}"
-    
-    echo "下载 $JAR_FILE ..."
-    curl -L -o "$INSTALL_DIR/$JAR_FILE" "$DOWNLOAD_URL"
-    
+    # 检查文件是否已存在
+    if [ -f "$INSTALL_DIR/$JAR_FILE" ]; then
+        echo "✅ $JAR_FILE 已存在，跳过下载"
+    else
+        echo "正在下载 $JAR_FILE ..."
+        if curl -L -o "$INSTALL_DIR/$JAR_FILE" "$DOWNLOAD_URL"; then
+            echo "✅ 下载完成"
+        else
+            echo "❌ 下载失败，请检查网络连接或手动下载"
+            return 1
+        fi
+    fi
+
     # 创建启动脚本
-    cat > "$INSTALL_DIR/google-java-format" << EOF
+    cat > "$BIN_DIR/google-java-format" << EOF
 #!/bin/bash
-java -jar "$INSTALL_DIR/$JAR_FILE" "\$@"
+# Google Java Format v$VERSION for Java $MAJOR_VERSION
+java -jar $INSTALL_DIR/$JAR_FILE "\$@"
 EOF
     
-    chmod +x "$INSTALL_DIR/google-java-format"
-    
+    chmod +x "$BIN_DIR/google-java-format"
+
+    echo "启动脚本内容: "
+    cat "$BIN_DIR/google-java-format"
+
     # 添加到PATH
     SHELL_RC=""
-    if [ -n "$ZSH_VERSION" ]; then
+    if [ -n "$ZSH_VERSION" ] || [ -n "$zsh" ] || [[ $SHELL == *"zsh"* ]]; then
         SHELL_RC="$HOME/.zshrc"
-    elif [ -n "$BASH_VERSION" ]; then
+    elif [ -n "$BASH_VERSION" ] || [[ $SHELL == *"bash"* ]]; then
         SHELL_RC="$HOME/.bash_profile"
     else
         SHELL_RC="$HOME/.profile"
     fi
     
-    echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$SHELL_RC"
-    
-    echo "✅ Google Java Format手动安装完成"
+    # 检查PATH是否已包含该目录
+    if ! echo "$PATH" | grep -q "$BIN_DIR"; then
+        echo "export PATH=\"$BIN_DIR:\$PATH\"" >> "$SHELL_RC"
+        echo "✅ 已添加 $BIN_DIR 到PATH"
+    fi
+
+    echo "✅ Google Java Format v$VERSION 安装完成"
+    echo "安装路径: $BIN_DIR/google-java-format"
     echo "请运行以下命令重新加载配置："
     echo "source $SHELL_RC"
 }
@@ -198,48 +197,86 @@ verify_installation() {
 main() {
     echo ""
     
-    # 检查Java版本
-    if ! check_java_version; then
-        echo ""
-        read -p "是否安装Java 11? (y/n): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            install_java11
-        else
-            echo "跳过Java安装，将尝试手动安装Google Java Format"
-        fi
-    fi
+    # 检查Java版本和安装策略
+    check_java_version
+    JAVA_CHECK_RESULT=$?
     
-    echo ""
-    read -p "是否安装Google Java Format? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if command -v brew &> /dev/null && [ "$OS" = "macos" ]; then
-            install_google_java_format
-        elif command -v apt-get &> /dev/null && [ "$OS" = "linux" ]; then
-            install_google_java_format  
-        else
-            echo "使用手动安装方式..."
-            install_manual
+    if [ $JAVA_CHECK_RESULT -eq 0 ]; then
+        # Java版本兼容，询问是否安装
+        if [ "$INSTALL_STRATEGY" = "java8" ]; then
+            echo ""
+            read -p "是否安装兼容Java 8的Google Java Format 1.7版本? (y/n): " -n 1 -r
+        elif [ "$INSTALL_STRATEGY" = "java24" ]; then
+            echo ""
+            read -p "是否安装适用于Java 24的最新Google Java Format? (y/n): " -n 1 -r
         fi
         
-        verify_installation
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            # 根据操作系统和安装策略选择安装方式
+            if [ "$INSTALL_STRATEGY" = "java24" ] && command -v brew &> /dev/null && [ "$OS" = "macos" ]; then
+                echo "使用Homebrew安装最新版本..."
+                install_google_java_format
+            elif [ "$INSTALL_STRATEGY" = "java24" ] && command -v apt-get &> /dev/null && [ "$OS" = "linux" ]; then
+                echo "使用包管理器安装最新版本..."
+                install_google_java_format
+            else
+                echo "使用兼容版本安装方式..."
+                install_compatible_version
+            fi
+            
+            verify_installation
+        else
+            echo "跳过安装，你可以稍后手动安装"
+        fi
+    else
+        # Java版本不兼容或未安装
+        if [ "$INSTALL_STRATEGY" = "manual" ]; then
+            echo ""
+            echo "📖 请参考以下资源进行手动安装："
+            echo "   - 项目README.md文件"
+            echo "   - https://github.com/google/google-java-format"
+            echo ""
+            echo "建议的解决方案："
+            echo "1. 升级到Java 24并安装最新版Google Java Format"
+            echo "2. 降级到Java 8并使用兼容版本"
+            echo "3. 查看README.md中的多版本管理方案"
+        else
+            echo ""
+            read -p "未检测到Java，是否查看安装指南? (y/n): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo ""
+                echo "请先安装Java，推荐以下版本："
+                echo "- Java 8: 使用兼容版本Google Java Format"
+                echo "- Java 24: 使用最新版本Google Java Format"
+                echo ""
+                echo "安装Java后，重新运行此脚本"
+            fi
+        fi
     fi
     
     echo ""
-    echo "🎉 安装完成！"
+    echo "🎉 脚本执行完成！"
     echo ""
-    echo "接下来的步骤："
-    echo "1. 重启终端或运行 'source ~/.zshrc' (或对应的shell配置文件)"
-    echo "2. 在VS Code中安装Google Java Format Plugin扩展"
-    echo "3. 在设置中配置Java格式化工具"
-    echo ""
-    echo "VS Code配置示例："
-    echo '{'
-    echo '  "[java]": {'
-    echo '    "editor.defaultFormatter": "google-java-format.google-java-format-plugin"'
-    echo '  }'
-    echo '}'
+    if [ $JAVA_CHECK_RESULT -eq 0 ] && [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "接下来的步骤："
+        echo "1. 重启终端或运行 'source ~/.zshrc' (或对应的shell配置文件)"
+        echo "2. 在VS Code中安装Google Java Format Plugin扩展"
+        echo "3. 在VS Code设置中配置Java格式化工具"
+        echo ""
+        echo "VS Code配置示例："
+        echo '{'
+        echo '  "[java]": {'
+        echo '    "editor.defaultFormatter": "google-java-format.google-java-format-plugin"'
+        echo '  },'
+        if [ "$INSTALL_STRATEGY" = "java8" ] || [ "$INSTALL_STRATEGY" = "java24" ]; then
+            echo '  "google-java-format.executable-path": "'$HOME'/.local/bin/google-java-format"'
+        fi
+        echo '}'
+    else
+        echo "如需帮助，请查看项目README.md文件"
+    fi
 }
 
 # 运行主流程

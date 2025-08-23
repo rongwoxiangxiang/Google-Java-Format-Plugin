@@ -3,7 +3,7 @@
   "displayName": "Google Java Format Plugin",
   "description": "简洁的Google Java Format格式化工具，支持Google Style和AOSP格式切换",
   "version": "1.0.0",
-  "publisher": "google-java-format",
+  "publisher": "Google-Java-Format-Plugin",
   "engines": {
     "vscode": "^1.74.0"
   },
