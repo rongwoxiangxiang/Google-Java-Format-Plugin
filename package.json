@@ -2,8 +2,8 @@
   "name": "google-java-format-plugin",
   "displayName": "Google Java Format Plugin",
   "description": "简洁的Google Java Format格式化工具，支持Google Style和AOSP格式切换",
-  "version": "1.0.0",
-  "publisher": "Google-Java-Format-Plugin",
+  "version": "1.0.1",
+  "publisher": "rongwoxiangxiang",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -76,7 +76,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/google-format-plugin.git"
+    "url": "https://github.com/rongwoxiangxiang/Google-Java-Format-Plugin.git"
   },
   "license": "Apache-2.0"
 }

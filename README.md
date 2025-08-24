@@ -40,7 +40,7 @@ sudo apt-get install google-java-format
 
 ```bash
 # 下载并运行安装脚本
-curl -fsSL https://raw.githubusercontent.com/rongwoxiangxiang/google-format-plugin/main/install-google-java-format.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rongwoxiangxiang/Google-Java-Format-Plugin/refs/heads/main/install-google-java-format.sh | bash
 
 # 或者克隆仓库后运行
 git clone https://github.com/rongwoxiangxiang/google-format-plugin.git
