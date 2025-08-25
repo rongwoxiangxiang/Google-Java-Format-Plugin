@@ -22,6 +22,12 @@ set -e
 echo "🚀 Google Java Format 安装脚本"
 echo "================================"
 
+# 支持环境变量控制自动安装
+# 设置 AUTO_INSTALL=1 可以跳过所有确认提示
+if [ "${AUTO_INSTALL:-0}" = "1" ]; then
+    echo "🤖 检测到自动安装模式 (AUTO_INSTALL=1)"
+fi
+
 # 检查操作系统
 OS="unknown"
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -106,15 +112,17 @@ install_compatible_version() {
     
     # 根据Java版本选择对应的版本
     if [ "$INSTALL_STRATEGY" = "java8" ]; then
-        # Java 8 使用 1.8 版本
-        echo "为Java 8安装Google Java Format 1.7..."
-        JAR_FILE="google-java-format-1.7-all-deps.jar"
-        DOWNLOAD_URL="https://github.com/google/google-java-format/releases/download/google-java-format-1.7/$JAR_FILE"
+        # Java 8 使用 1.7 版本
+        VERSION="1.7"
+        echo "为Java 8安装Google Java Format $VERSION..."
+        JAR_FILE="google-java-format-${VERSION}-all-deps.jar"
+        DOWNLOAD_URL="https://github.com/google/google-java-format/releases/download/google-java-format-${VERSION}/$JAR_FILE"
     elif [ "$INSTALL_STRATEGY" = "java24" ]; then
         # Java 24 使用最新版本
-        echo "为Java 24安装Google Java Format 1.28..."
-        JAR_FILE="google-java-format-1.28.0-all-deps.jar"
-        DOWNLOAD_URL="https://github.com/google/google-java-format/releases/download/v1.28.0/$JAR_FILE"
+        VERSION="1.28.0"
+        echo "为Java 24安装Google Java Format $VERSION..."
+        JAR_FILE="google-java-format-${VERSION}-all-deps.jar"
+        DOWNLOAD_URL="https://github.com/google/google-java-format/releases/download/v${VERSION}/$JAR_FILE"
     else
         echo "❌ 不支持的安装策略: $INSTALL_STRATEGY"
         return 1
@@ -193,6 +201,30 @@ verify_installation() {
     fi
 }
 
+# 检测是否在管道中运行
+is_piped() {
+    [ ! -t 0 ]  # 检查标准输入是否不是终端
+}
+
+# 安全的用户输入函数
+safe_read() {
+    local prompt="$1"
+    local default="$2"
+    
+    if [ "${AUTO_INSTALL:-0}" = "1" ]; then
+        echo "$prompt"
+        echo "🤖 自动安装模式，使用默认选择: $default"
+        REPLY="$default"
+    elif is_piped; then
+        echo "$prompt"
+        echo "📡 检测到通过管道执行，使用默认选择: $default"
+        REPLY="$default"
+    else
+        read -p "$prompt" -n 1 -r < /dev/tty
+        echo
+    fi
+}
+
 # 主流程
 main() {
     echo ""
@@ -205,13 +237,12 @@ main() {
         # Java版本兼容，询问是否安装
         if [ "$INSTALL_STRATEGY" = "java8" ]; then
             echo ""
-            read -p "是否安装兼容Java 8的Google Java Format 1.7版本? (y/n): " -n 1 -r
+            safe_read "是否安装兼容Java 8的Google Java Format 1.7版本? (y/n): " "y"
         elif [ "$INSTALL_STRATEGY" = "java24" ]; then
             echo ""
-            read -p "是否安装适用于Java 24的最新Google Java Format? (y/n): " -n 1 -r
+            safe_read "是否安装适用于Java 24的最新Google Java Format? (y/n): " "y"
         fi
         
-        echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # 根据操作系统和安装策略选择安装方式
             if [ "$INSTALL_STRATEGY" = "java24" ] && command -v brew &> /dev/null && [ "$OS" = "macos" ]; then
@@ -243,8 +274,7 @@ main() {
             echo "3. 查看README.md中的多版本管理方案"
         else
             echo ""
-            read -p "未检测到Java，是否查看安装指南? (y/n): " -n 1 -r
-            echo
+            safe_read "未检测到Java，是否查看安装指南? (y/n): " "y"
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 echo ""
                 echo "请先安装Java，推荐以下版本："

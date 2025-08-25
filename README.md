@@ -14,59 +14,54 @@
 
 需要在系统中安装`google-java-format`工具。推荐使用包管理器安装：
 
-### macOS (Homebrew)
+⚠️ **重要提示**: 脚本执行完成后需要重启下cursor
 
-```bash
-brew install google-java-format
-```
+## 脚本安装
 
-### Ubuntu/Debian
-
-```bash
-sudo apt-get install google-java-format
-```
-
-### 手动安装
-
-从 [Google Java Format Releases](https://github.com/google/google-java-format/releases) 下载 jar 文件，并创建启动脚本。
-
-## Java 版本兼容性问题
-
-⚠️ **重要提示**: Google Java Format 需要 Java 24 或更高版本运行，如果你的系统只有 Java 8，请参考以下解决方案：
-
-### 🚀 快速安装脚本（推荐）
+### 🚀 快速安装脚本（推荐,目前仅支持 java8/24）
 
 我们提供了一个自动安装脚本，可以自动检测和安装 Java 以及 Google Java Format：
 
 ```bash
-# 下载并运行安装脚本
+# 方法1: 通过管道运行（推荐，自动处理用户输入）
 curl -fsSL https://raw.githubusercontent.com/rongwoxiangxiang/Google-Java-Format-Plugin/refs/heads/main/install-google-java-format.sh | bash
 
-# 或者克隆仓库后运行
-git clone https://github.com/rongwoxiangxiang/google-format-plugin.git
-cd google-format-plugin
+# 方法2: 自动安装模式（无需任何确认，直接安装）
+curl -fsSL https://raw.githubusercontent.com/rongwoxiangxiang/Google-Java-Format-Plugin/refs/heads/main/install-google-java-format.sh | AUTO_INSTALL=1 bash
+
+# 方法3: 下载后本地运行（支持交互式选择）
+curl -O https://raw.githubusercontent.com/rongwoxiangxiang/Google-Java-Format-Plugin/refs/heads/main/install-google-java-format.sh
+chmod +x install-google-java-format.sh
+./install-google-java-format.sh
+
+# 方法4: 克隆仓库后运行
+git clone https://github.com/rongwoxiangxiang/Google-Java-Format-Plugin.git
+cd Google-Java-Format-Plugin
 ./install-google-java-format.sh
 ```
 
 **脚本功能**:
 
-- 自动检测当前 Java 版本
-- 如果需要，安装 Java 24
-- 安装 Google Java Format
-- 配置环境变量
-- 验证安装结果
+- 🔍 自动检测当前 Java 版本
+- 📦 智能选择对应版本：Java 8 → Google Java Format 1.7，Java 24 → 最新版本
+- 🚀 支持管道执行，自动处理用户输入问题
+- 🤖 支持 `AUTO_INSTALL=1` 环境变量实现完全自动化安装
+- ⚙️ 自动配置环境变量和启动脚本
+- ✅ 安装后验证功能是否正常
 
-### 方案 1: 使用旧版本 Google Java Format（Java 8 兼容）
+## 手动安装
 
-如果必须使用 Java 8，可以下载兼容 Java 8 的旧版本：
+### 方案 1: Java 8 版本安装
 
 ```bash
+# 默认已经安装java8，且已配置 JAVA_HOME
+
 # 创建工具目录
 mkdir -p ~/.local/tool/google-java-format
 mkdir -p ~/.local/bin/
 cd ~/.local/tool/google-java-format
 
-# 下载兼容Java 8的版本（如1.7版本）
+# 下载兼容Java 8的版本
 wget https://github.com/google/google-java-format/releases/download/google-java-format-1.7/google-java-format-1.7-all-deps.jar
 
 
@@ -80,33 +75,44 @@ EOF
 # 添加执行权限
 chmod +x google-java-format
 
-# 添加到PATH
-export PATH="$HOME/.local/bin:$PATH"
+# 添加到 PATH,根据实际情况可调整 SHELL_RC
+echo "export PATH=\"$HOME/.local/bin:\$PATH\"" >> $HOME/.bash_profile
+source $HOME/.bash_profile
 ```
 
-### 方案 2: 安装 Java 24 + 对插件进行封装
+### 方案 2: Java 24 版本安装
 
 ```bash
+
 # 1.使用Homebrew安装OpenJDK 24
 brew install openjdk@24
 
-# 2.创建包装bash，可以按需存放对应目录
-touch ~/.local/bin/google-java-format
+# 2.创建工具目录
+mkdir -p ~/.local/tool/google-java-format
+mkdir -p ~/.local/bin/
 
-# 3.配置执行目录
-"google-java-format.executable-path": "~/.local/bin/google-java-format"
-```
+# 3.下载google-java-format
+cd ~/.local/tool/google-java-format
+wget https://github.com/google/google-java-format/releases/download/v1.28.0/google-java-format-1.28.0-all-deps.jar
 
-```bash
-> cat ~/.local/bin/google-java-format
-
+# 3.创建包装bash，可以按需存放对应目录
+cd ~/.local/bin/
+cat > google-java-format << 'EOF'
 #!/bin/bash
-# Google Java Format wrapper script
-# This script ensures google-java-format uses the correct Java version
+# java24, google-java-format-1.28.0-all-deps.jar路径，按照实际情况调整
+JAVA_HOME="/opt/homebrew/Cellar/openjdk/24.0.2/libexec/openjdk.jdk/Contents/Home"
+exec "$JAVA_HOME/bin/java" -jar "$HOME/.local/tool/google-java-format/google-java-format-1.28.0-all-deps.jar" "$@"
 
-#java24路径
-export JAVA_HOME=/opt/homebrew/Cellar/openjdk/24.0.2/libexec/openjdk.jdk/Contents/Home
-exec /opt/homebrew/bin/google-java-format "$@"
+EOF
+
+
+
+# 4.添加执行权限
+chmod +x google-java-format
+
+# 5.添加到PATH
+echo "export PATH=\"$HOME/.local/bin:\$PATH\"" >> $HOME/.bash_profile
+source $HOME/.bash_profile
 ```
 
 ### 方案 3: 多 Java 版本管理
